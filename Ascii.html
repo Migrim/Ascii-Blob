@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ASCII Blob</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #000;
+        }
+        canvas {
+            display: block;
+        }
+        #settings {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            background-color: rgba(0, 0, 0, 0.7);
+            padding: 10px;
+            color: white;
+            font-family: monospace;
+            font-size: 14px;
+            border-radius: 10px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+        }
+        .slider-container {
+            position: relative;
+            margin: 10px 0;
+        }
+        input[type="range"] {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 100px;
+            height: 10px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 5px;
+            outline: none;
+            z-index: 1;
+            position: relative;
+            backdrop-filter: blur(15px);
+            box-shadow: inset 0 1px 4px rgba(255, 255, 255, 0.5), 0 4px 10px rgba(0, 0, 0, 0.2);
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            background: rgba(255, 255, 255, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.8);
+            border-radius: 50%;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+        input[type="range"]::-webkit-slider-thumb:hover {
+            background: rgba(255, 255, 255, 0.8);
+        }
+        input[type="range"]::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            background: rgba(255, 255, 255, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.8);
+            border-radius: 50%;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+        input[type="range"]::-moz-range-thumb:hover {
+            background: rgba(255, 255, 255, 0.8);
+        }
+        .slider-label {
+            position: absolute;
+            top: 90%; 
+            left: 10%; 
+            width: 80%; 
+            text-align: left; 
+            color: rgba(255, 255, 255, 0.5); 
+            font-size: 12px;
+            z-index: 0;
+        }
+        #modeStatus {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: white;
+            font-family: monospace;
+            font-size: 16px;
+            background-color: rgba(0, 0, 0, 0.5);
+            padding: 5px 10px;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="asciiCanvas"></canvas>
+    <div id="modeStatus">Mode: Normal</div>
+
+    <div id="settings">
+        <div class="slider-container">
+            <span class="slider-label" id="densityValue">1000</span>
+            <label>Density: </label>
+            <input type="range" id="densitySlider" min="100" max="4000" value="1000">
+        </div>
+        <div class="slider-container">
+            <span class="slider-label" id="cursorSizeValue">100</span>
+            <label>Cursor Size: </label>
+            <input type="range" id="cursorSizeSlider" min="20" max="300" value="100">
+        </div>
+        <div class="slider-container">
+            <span class="slider-label" id="blobSpeedValue">0.02</span>
+            <label>Tension: </label>
+            <input type="range" id="blobSpeedSlider" min="0.01" max="0.2" step="0.01" value="0.02">
+        </div>
+        <div class="slider-container">
+            <span class="slider-label" id="symbolSizeValue">20</span>
+            <label>Symbol Size: </label>
+            <input type="range" id="symbolSizeSlider" min="10" max="50" value="20">
+        </div>
+        <div class="slider-container">
+            <span class="slider-label" id="swirlSpeedValue">0</span>
+            <label>Swirl: </label>
+            <input type="range" id="swirlSpeedSlider" min="0" max="0.12" step="0.01" value="0">
+        </div>
+        <div class="slider-container">
+            <span class="slider-label" id="bounceEffectValue">1</span>
+            <label>Bounce: </label>
+            <input type="range" id="bounceEffectSlider" min="0" max="5" step="0.1" value="1">
+        </div>
+        <div class="slider-container">
+            <span class="slider-label" id="waveEffectValue">0</span>
+            <label>Wave: </label>
+            <input type="range" id="waveEffectSlider" min="0" max="5" step="0.1" value="0">
+        </div>
+    </div>
+
+
+    <script>
+        const canvas = document.getElementById('asciiCanvas');
+        const ctx = canvas.getContext('2d');
+        const modeStatus = document.getElementById('modeStatus');
+
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        const blobText = [
+            '@', '#', '%', '&', '$', '*', '=', '+', '-', '~', '!', '(', ')', '[', ']', '{', '}', '?', '/', '\\', '|',
+            'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z',
+            'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z',
+            '0', '1', '2', '3', '4', '5', '6', '7', '8', '9'
+        ];
+
+        let blob = [];
+        let numSymbols = parseInt(localStorage.getItem('density')) || 1000;
+        let blobSpeed = parseFloat(localStorage.getItem('blobSpeed')) || 0.02;
+        let symbolSize = parseInt(localStorage.getItem('symbolSize')) || 20;
+        let swirlSpeed = parseFloat(localStorage.getItem('swirlSpeed')) || 0;
+        let bounceEffect = parseFloat(localStorage.getItem('bounceEffect')) || 1;
+        let waveEffect = parseFloat(localStorage.getItem('waveEffect')) || 0;
+        let swirlAngle = 0;
+        let time = 0;
+        let magnetMode = false;
+        let vortexMode = false;
+
+        const blobRadius = 150;
+        const centerX = canvas.width / 2;
+        const centerY = canvas.height / 2;
+
+        const mouse = { x: null, y: null, radius: parseInt(localStorage.getItem('cursorSize')) || 100 };
+
+        const densitySlider = document.getElementById('densitySlider');
+        const densityValue = document.getElementById('densityValue');
+        const cursorSizeSlider = document.getElementById('cursorSizeSlider');
+        const cursorSizeValue = document.getElementById('cursorSizeValue');
+        const blobSpeedSlider = document.getElementById('blobSpeedSlider');
+        const blobSpeedValue = document.getElementById('blobSpeedValue');
+        const symbolSizeSlider = document.getElementById('symbolSizeSlider');
+        const symbolSizeValue = document.getElementById('symbolSizeValue');
+        const swirlSpeedSlider = document.getElementById('swirlSpeedSlider');
+        const swirlSpeedValue = document.getElementById('swirlSpeedValue');
+        const bounceEffectSlider = document.getElementById('bounceEffectSlider');
+        const bounceEffectValue = document.getElementById('bounceEffectValue');
+        const waveEffectSlider = document.getElementById('waveEffectSlider');
+        const waveEffectValue = document.getElementById('waveEffectValue');
+
+        densitySlider.value = numSymbols;
+        cursorSizeSlider.value = mouse.radius;
+        blobSpeedSlider.value = blobSpeed;
+        symbolSizeSlider.value = symbolSize;
+        swirlSpeedSlider.value = swirlSpeed;
+        bounceEffectSlider.value = bounceEffect;
+        waveEffectSlider.value = waveEffect;
+
+        densityValue.textContent = numSymbols;
+        cursorSizeValue.textContent = mouse.radius;
+        blobSpeedValue.textContent = blobSpeed;
+        symbolSizeValue.textContent = symbolSize;
+        swirlSpeedValue.textContent = swirlSpeed;
+        bounceEffectValue.textContent = bounceEffect;
+        waveEffectValue.textContent = waveEffect;
+
+        densitySlider.addEventListener('input', function () {
+            numSymbols = parseInt(this.value);
+            densityValue.textContent = this.value;
+            localStorage.setItem('density', this.value);
+            resetBlob();
+        });
+
+        cursorSizeSlider.addEventListener('input', function () {
+            mouse.radius = parseInt(this.value);
+            cursorSizeValue.textContent = this.value;
+            localStorage.setItem('cursorSize', this.value);
+        });
+
+        blobSpeedSlider.addEventListener('input', function () {
+            blobSpeed = parseFloat(this.value);
+            blobSpeedValue.textContent = this.value;
+            localStorage.setItem('blobSpeed', this.value);
+        });
+
+        symbolSizeSlider.addEventListener('input', function () {
+            symbolSize = parseInt(this.value);
+            symbolSizeValue.textContent = this.value;
+            localStorage.setItem('symbolSize', this.value);
+        });
+
+        swirlSpeedSlider.addEventListener('input', function () {
+            swirlSpeed = parseFloat(this.value);
+            swirlSpeedValue.textContent = this.value;
+            localStorage.setItem('swirlSpeed', this.value);
+        });
+
+        bounceEffectSlider.addEventListener('input', function () {
+            bounceEffect = parseFloat(this.value);
+            bounceEffectValue.textContent = this.value;
+            localStorage.setItem('bounceEffect', this.value);
+        });
+
+        waveEffectSlider.addEventListener('input', function () {
+            waveEffect = parseFloat(this.value);
+            waveEffectValue.textContent = this.value;
+            localStorage.setItem('waveEffect', this.value);
+        });
+
+        canvas.addEventListener('click', function () {
+            vortexMode = !vortexMode;
+            modeStatus.textContent = `Mode: ${vortexMode ? 'Vortex' : 'Normal'}`;
+        });
+
+        canvas.addEventListener('contextmenu', function (event) {
+            event.preventDefault();
+            magnetMode = !magnetMode;
+        });
+
+        function initBlob() {
+            blob = [];
+            for (let i = 0; i < numSymbols; i++) {
+                const distanceFromCenter = Math.random() * blobRadius;
+                const angle = Math.random() * Math.PI * 2;
+                const x = centerX + Math.cos(angle) * distanceFromCenter;
+                const y = centerY + Math.sin(angle) * distanceFromCenter;
+                blob.push({
+                    symbol: blobText[Math.floor(Math.random() * blobText.length)],
+                    originalX: x,
+                    originalY: y,
+                    x: x,
+                    y: y,
+                    vx: 0,
+                    vy: 0
+                });
+            }
+        }
+
+        function drawBlob() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            swirlAngle += swirlSpeed;
+            time += waveEffect * 0.02;
+
+            const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+            gradient.addColorStop(0, '#e1bee7');   
+            gradient.addColorStop(0.25, '#ce93d8'); 
+            gradient.addColorStop(0.5, '#ba68c8');  
+            gradient.addColorStop(0.75, '#ab47bc'); 
+            gradient.addColorStop(1, '#9c27b0');    
+
+            blob.forEach((part, index) => {
+                const dx = mouse.x - part.x;
+                const dy = mouse.y - part.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+
+                if (vortexMode && distance < mouse.radius) {
+                    const angle = Math.atan2(dy, dx);
+                    const attractionStrength = 1; 
+                    part.vx += Math.cos(angle + Math.PI / 2) * attractionStrength;
+                    part.vy += Math.sin(angle + Math.PI / 2) * attractionStrength;
+                } else if (magnetMode && distance < mouse.radius) {
+                    const attractionStrength = 0.02;
+                    part.vx += dx * attractionStrength;
+                    part.vy += dy * attractionStrength;
+                } else if (distance < mouse.radius) {
+                    const angle = Math.atan2(dy, dx);
+                    const force = (mouse.radius - distance) / mouse.radius;
+                    const escapeSpeed = force * bounceEffect * 5;
+
+                    part.vx += Math.cos(angle) * -escapeSpeed;
+                    part.vy += Math.sin(angle) * -escapeSpeed;
+                } else {
+                    const angleFromCenter = Math.atan2(part.originalY - centerY, part.originalX - centerX);
+                    const radiusFromCenter = Math.sqrt((part.originalX - centerX) ** 2 + (part.originalY - centerY) ** 2);
+                    const newX = centerX + Math.cos(angleFromCenter + swirlAngle) * radiusFromCenter;
+                    const newY = centerY + Math.sin(angleFromCenter + swirlAngle) * radiusFromCenter;
+
+                    const waveOffset = Math.sin(time + index * 0.1) * waveEffect * 20;
+                    const dx = newX - part.x;
+                    const dy = newY - part.y + waveOffset;
+
+                    part.vx += dx * blobSpeed;
+                    part.vy += dy * blobSpeed;
+                }
+
+                part.vx *= 0.9;
+                part.vy *= 0.9;
+
+                part.x += part.vx;
+                part.y += part.vy;
+
+                ctx.fillStyle = gradient;  
+                ctx.font = `${symbolSize}px monospace`;
+                ctx.fillText(part.symbol, part.x, part.y);
+            });
+        }
+
+        function animate() {
+            drawBlob();
+            requestAnimationFrame(animate);
+        }
+
+        function resetBlob() {
+            initBlob();
+        }
+
+        window.addEventListener('mousemove', (event) => {
+            mouse.x = event.x;
+            mouse.y = event.y;
+        });
+
+        window.addEventListener('resize', () => {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            resetBlob();
+        });
+
+        initBlob();
+        animate();
+    </script>
+</body>
+</html>
