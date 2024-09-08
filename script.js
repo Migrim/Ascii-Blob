@@ -23,6 +23,7 @@ let swirlAngle = 0;
 let time = 0;
 let magnetMode = false;
 let vortexMode = false;
+let vortexStrength = 1;
 
 const blobRadius = 150;
 const centerX = canvas.width / 2;
@@ -104,9 +105,26 @@ waveEffectSlider.addEventListener('input', function () {
     localStorage.setItem('waveEffect', this.value);
 });
 
+window.addEventListener('wheel', (event) => {
+    if (vortexMode) {
+        vortexStrength += event.deltaY * -0.01;  
+        vortexStrength = Math.max(0.1, Math.min(vortexStrength, 30)); 
+        modeStatus.textContent = `Mode: Vortex (Strength: ${vortexStrength.toFixed(2)})`;
+    }
+});
+
 canvas.addEventListener('click', function () {
-    vortexMode = !vortexMode;
-    modeStatus.textContent = `Mode: ${vortexMode ? 'Vortex' : 'Normal'}`;
+    if (!vortexMode && !magnetMode) {
+        vortexMode = true;
+        modeStatus.textContent = `Mode: Vortex`;
+    } else if (vortexMode) {
+        vortexMode = false;
+        magnetMode = true;
+        modeStatus.textContent = `Mode: Magnet`;
+    } else {
+        magnetMode = false;
+        modeStatus.textContent = `Mode: Normal`;
+    }
 });
 
 canvas.addEventListener('contextmenu', function (event) {
@@ -150,10 +168,10 @@ function drawBlob() {
         const dx = mouse.x - part.x;
         const dy = mouse.y - part.y;
         const distance = Math.sqrt(dx * dx + dy * dy);
-
+    
         if (vortexMode && distance < mouse.radius) {
             const angle = Math.atan2(dy, dx);
-            const attractionStrength = 1; 
+            const attractionStrength = vortexStrength; 
             part.vx += Math.cos(angle + Math.PI / 2) * attractionStrength;
             part.vy += Math.sin(angle + Math.PI / 2) * attractionStrength;
         } else if (magnetMode && distance < mouse.radius) {
@@ -164,7 +182,7 @@ function drawBlob() {
             const angle = Math.atan2(dy, dx);
             const force = (mouse.radius - distance) / mouse.radius;
             const escapeSpeed = force * bounceEffect * 5;
-
+    
             part.vx += Math.cos(angle) * -escapeSpeed;
             part.vy += Math.sin(angle) * -escapeSpeed;
         } else {
@@ -172,22 +190,22 @@ function drawBlob() {
             const radiusFromCenter = Math.sqrt((part.originalX - centerX) ** 2 + (part.originalY - centerY) ** 2);
             const newX = centerX + Math.cos(angleFromCenter + swirlAngle) * radiusFromCenter;
             const newY = centerY + Math.sin(angleFromCenter + swirlAngle) * radiusFromCenter;
-
+    
             const waveOffset = Math.sin(time + index * 0.1) * waveEffect * 20;
             const dx = newX - part.x;
             const dy = newY - part.y + waveOffset;
-
+    
             part.vx += dx * blobSpeed;
             part.vy += dy * blobSpeed;
         }
-
+    
         part.vx *= 0.9;
         part.vy *= 0.9;
-
+    
         part.x += part.vx;
         part.y += part.vy;
-
-        ctx.fillStyle = gradient;  
+    
+        ctx.fillStyle = gradient;
         ctx.font = `${symbolSize}px monospace`;
         ctx.fillText(part.symbol, part.x, part.y);
     });
