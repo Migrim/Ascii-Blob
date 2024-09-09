@@ -13,12 +13,12 @@ const blobText = [
 ];
 
 let blob = [];
-let numSymbols = parseInt(localStorage.getItem('density')) || 1000;
-let blobSpeed = parseFloat(localStorage.getItem('blobSpeed')) || 0.02;
-let symbolSize = parseInt(localStorage.getItem('symbolSize')) || 20;
-let swirlSpeed = parseFloat(localStorage.getItem('swirlSpeed')) || 0;
-let bounceEffect = parseFloat(localStorage.getItem('bounceEffect')) || 1;
-let waveEffect = parseFloat(localStorage.getItem('waveEffect')) || 0;
+let numSymbols = parseInt(localStorage.getItem('density')) || 2426;
+let blobSpeed = parseFloat(localStorage.getItem('blobSpeed')) || 0.01;
+let symbolSize = parseInt(localStorage.getItem('symbolSize')) || 15;
+let swirlSpeed = parseFloat(localStorage.getItem('swirlSpeed')) || 0.02;
+let bounceEffect = parseFloat(localStorage.getItem('bounceEffect')) || 5;
+let waveEffect = parseFloat(localStorage.getItem('waveEffect')) || 1.1;
 let swirlAngle = 0;
 let time = 0;
 let magnetMode = false;
