@@ -11,6 +11,7 @@ const blobText = [
     'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z',
     '0', '1', '2', '3', '4', '5', '6', '7', '8', '9'
 ];
+const explosionText = ['@', '#', '*', '%', '$']; 
 
 let blob = [];
 let numSymbols = parseInt(localStorage.getItem('density')) || 2426;
@@ -24,6 +25,7 @@ let time = 0;
 let magnetMode = false;
 let vortexMode = false;
 let vortexStrength = 1;
+let explosions = [];
 
 const blobRadius = 150;
 const centerX = canvas.width / 2;
@@ -129,7 +131,7 @@ canvas.addEventListener('click', function () {
 
 canvas.addEventListener('contextmenu', function (event) {
     event.preventDefault();
-    magnetMode = !magnetMode;
+    asciiExplosion(event.x, event.y);
 });
 
 function initBlob() {
@@ -152,8 +154,6 @@ function initBlob() {
 }
 
 function drawBlob() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-
     swirlAngle += swirlSpeed;
     time += waveEffect * 0.02;
 
@@ -168,10 +168,10 @@ function drawBlob() {
         const dx = mouse.x - part.x;
         const dy = mouse.y - part.y;
         const distance = Math.sqrt(dx * dx + dy * dy);
-    
+
         if (vortexMode && distance < mouse.radius) {
             const angle = Math.atan2(dy, dx);
-            const attractionStrength = vortexStrength; 
+            const attractionStrength = vortexStrength;
             part.vx += Math.cos(angle + Math.PI / 2) * attractionStrength;
             part.vy += Math.sin(angle + Math.PI / 2) * attractionStrength;
         } else if (magnetMode && distance < mouse.radius) {
@@ -182,7 +182,7 @@ function drawBlob() {
             const angle = Math.atan2(dy, dx);
             const force = (mouse.radius - distance) / mouse.radius;
             const escapeSpeed = force * bounceEffect * 5;
-    
+
             part.vx += Math.cos(angle) * -escapeSpeed;
             part.vy += Math.sin(angle) * -escapeSpeed;
         } else {
@@ -190,29 +190,98 @@ function drawBlob() {
             const radiusFromCenter = Math.sqrt((part.originalX - centerX) ** 2 + (part.originalY - centerY) ** 2);
             const newX = centerX + Math.cos(angleFromCenter + swirlAngle) * radiusFromCenter;
             const newY = centerY + Math.sin(angleFromCenter + swirlAngle) * radiusFromCenter;
-    
+
             const waveOffset = Math.sin(time + index * 0.1) * waveEffect * 20;
             const dx = newX - part.x;
             const dy = newY - part.y + waveOffset;
-    
+
             part.vx += dx * blobSpeed;
             part.vy += dy * blobSpeed;
         }
-    
+
         part.vx *= 0.9;
         part.vy *= 0.9;
-    
+
         part.x += part.vx;
         part.y += part.vy;
-    
+
         ctx.fillStyle = gradient;
         ctx.font = `${symbolSize}px monospace`;
         ctx.fillText(part.symbol, part.x, part.y);
     });
 }
 
+function asciiExplosion(x, y) {
+    const explosionSize = mouse.radius * 1.5; 
+    const numSymbolsInExplosion = 50; 
+    const explosionSymbols = [];
+
+    for (let i = 0; i < numSymbolsInExplosion; i++) {
+        const symbol = explosionText[Math.floor(Math.random() * explosionText.length)]; 
+        const angle = Math.random() * Math.PI * 2;
+        const distance = Math.random() * explosionSize;
+        explosionSymbols.push({
+            symbol: symbol,
+            x: x + Math.cos(angle) * distance,
+            y: y + Math.sin(angle) * distance,
+            vx: Math.cos(angle) * (Math.random() * 8), 
+            vy: Math.sin(angle) * (Math.random() * 8),
+            life: 100
+        });
+    }
+
+    explosions.push(explosionSymbols);
+
+    blob.forEach((part) => {
+        const dx = part.x - x;
+        const dy = part.y - y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+
+        if (distance < explosionSize) {
+
+            const force = (explosionSize - distance) / explosionSize;
+            const explosionForce = force * mouse.radius * 4; 
+
+            part.vx += dx / distance * explosionForce;
+            part.vy += dy / distance * explosionForce;
+        }
+    });
+}
+
+function drawExplosions() {
+    explosions.forEach((explosion, explosionIndex) => {
+        explosion.forEach((symbol, symbolIndex) => {
+            if (symbol.life > 0) {
+                const gradient = ctx.createRadialGradient(
+                    symbol.x, symbol.y, 0,
+                    symbol.x, symbol.y, symbolSize * 2
+                );
+                gradient.addColorStop(0, `rgba(255, 255, 255, ${symbol.life / 100})`); 
+                gradient.addColorStop(0.5, `rgba(138, 43, 226, ${symbol.life / 100})`); 
+                gradient.addColorStop(1, `rgba(0, 255, 255, ${symbol.life / 100})`);
+
+                ctx.font = `${symbolSize - 5}px monospace`; 
+                ctx.fillStyle = gradient; 
+                ctx.fillText(symbol.symbol, symbol.x, symbol.y);
+
+                symbol.x += symbol.vx;
+                symbol.y += symbol.vy;
+                symbol.life -= 2; 
+            }
+        });
+
+        explosions[explosionIndex] = explosion.filter(symbol => symbol.life > 0);
+    });
+
+    explosions = explosions.filter(explosion => explosion.length > 0);
+}
+
 function animate() {
-    drawBlob();
+    ctx.clearRect(0, 0, canvas.width, canvas.height); 
+
+    drawBlob();        
+    drawExplosions();  
+
     requestAnimationFrame(animate);
 }
 
