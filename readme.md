@@ -4,15 +4,22 @@ ASCII Blob is an interactive canvas experiment where ASCII symbols move and reac
 
 ## Features
 
-- **Modes**: Switch between Normal, Vortex, and Magnet modes by clicking.
+- **Modes**: 
+  - **Normal**: Default blob behavior.
+  - **Vortex**: Swirling motion centered around the cursor.
+  - **Magnet**: Attracts symbols towards the cursor.
+  - **Mirror Mode**: Activated with `M` key, reflects symbols around the vertical axis.
 - **Explosions**: Right-click to trigger an ASCII explosion at the cursor.
-- **Adjustable Parameters**: Use the sliders to change density, cursor size, blob speed, symbol size, and visual effects like swirl, bounce, and wave.
+- **Shape Shifting**: Press `S` to cycle through different shapes (Normal, Circle, Square, Flower, and Heart).
+- **Adjustable Parameters**: Use sliders to change density, cursor size, blob speed, symbol size, and visual effects like swirl, bounce, and wave.
 
 ## Controls
 
 - **Left-click**: Cycle through modes (Normal, Vortex, Magnet).
 - **Right-click**: Trigger an ASCII explosion at the current cursor position.
 - **Scroll**: Adjust vortex strength when in Vortex mode.
+- **M key**: Toggle Mirror mode on and off.
+- **S key**: Cycle through different shapes (Normal, Circle, Square, Flower, and Heart).
 
 ## Adjustable Settings
 

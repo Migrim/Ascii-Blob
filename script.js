@@ -26,8 +26,11 @@ let magnetMode = false;
 let vortexMode = false;
 let vortexStrength = 1;
 let explosions = [];
+let mirrorMode = false;
+let currentShape = 'circle';
+let shapeIndex = 0;
 
-const blobRadius = 150;
+const shapes = ['normal', 'circle', 'square', 'heart'];const blobRadius = 150;
 const centerX = canvas.width / 2;
 const centerY = canvas.height / 2;
 
@@ -134,6 +137,22 @@ canvas.addEventListener('contextmenu', function (event) {
     asciiExplosion(event.x, event.y);
 });
 
+window.addEventListener('keydown', (event) => {
+    if (event.key === 'm' || event.key === 'M') {
+        mirrorMode = !mirrorMode;
+        modeStatus.textContent = mirrorMode ? `Mode: Mirror` : `Mode: Normal`;
+    }
+});
+
+window.addEventListener('keydown', (event) => {
+    if (event.key === 's' || event.key === 'S') {
+        shapeIndex = (shapeIndex + 1) % shapes.length;
+        currentShape = shapes[shapeIndex];
+        modeStatus.textContent = `Shape: ${currentShape.charAt(0).toUpperCase() + currentShape.slice(1)}`;
+        changeBlobShape(currentShape);
+    }
+});
+
 function initBlob() {
     blob = [];
     for (let i = 0; i < numSymbols; i++) {
@@ -150,6 +169,52 @@ function initBlob() {
             vx: 0,
             vy: 0
         });
+    }
+}
+
+function changeBlobShape(shape) {
+    const angleIncrement = (2 * Math.PI) / numSymbols;
+    const centerX = canvas.width / 2;
+    const centerY = canvas.height / 2;
+
+    for (let i = 0; i < blob.length; i++) {
+        let x, y;
+        const angle = angleIncrement * i;
+
+        if (shape === 'normal') {
+            const distanceFromCenter = Math.random() * blobRadius;
+            x = centerX + Math.cos(angle) * distanceFromCenter;
+            y = centerY + Math.sin(angle) * distanceFromCenter;
+        } else if (shape === 'circle') {
+            x = centerX + Math.cos(angle) * blobRadius;
+            y = centerY + Math.sin(angle) * blobRadius;
+        } else if (shape === 'square') {
+            const sideLength = blobRadius * 2;
+            const segment = i % (numSymbols / 4);
+            if (i < numSymbols / 4) {
+                x = centerX - blobRadius + (segment / (numSymbols / 4)) * sideLength;
+                y = centerY - blobRadius;
+            } else if (i < numSymbols / 2) {
+                x = centerX + blobRadius;
+                y = centerY - blobRadius + ((segment + 1) / (numSymbols / 4)) * sideLength;
+            } else if (i < (3 * numSymbols) / 4) {
+                x = centerX + blobRadius - ((segment + 2) / (numSymbols / 4)) * sideLength;
+                y = centerY + blobRadius;
+            } else {
+                x = centerX - blobRadius;
+                y = centerY + blobRadius - ((segment + 3) / (numSymbols / 4)) * sideLength;
+            }
+        } else if (shape === 'heart') {
+            const t = angle; 
+            const scale = 15;
+            x = centerX + scale * 16 * Math.pow(Math.sin(t), 3);
+            y = centerY - scale * (13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t));
+        }
+
+        blob[i].originalX = x;
+        blob[i].originalY = y;
+        blob[i].x = x;
+        blob[i].y = y;
     }
 }
 
@@ -208,6 +273,11 @@ function drawBlob() {
         ctx.fillStyle = gradient;
         ctx.font = `${symbolSize}px monospace`;
         ctx.fillText(part.symbol, part.x, part.y);
+
+        if (mirrorMode) {
+            const mirroredX = canvas.width - part.x;
+            ctx.fillText(part.symbol, mirroredX, part.y);
+        }
     });
 }
 
