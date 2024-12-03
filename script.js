@@ -30,7 +30,8 @@ let mirrorMode = false;
 let currentShape = 'circle';
 let shapeIndex = 0;
 
-const shapes = ['normal', 'circle', 'square', 'heart'];const blobRadius = 150;
+const shapes = ['normal', 'circle', 'square', 'heart', 'target', 'triangle', 'spiral', 'flower', 'starburst'];
+const blobRadius = 150;
 const centerX = canvas.width / 2;
 const centerY = canvas.height / 2;
 
@@ -209,7 +210,81 @@ function changeBlobShape(shape) {
             const scale = 15;
             x = centerX + scale * 16 * Math.pow(Math.sin(t), 3);
             y = centerY - scale * (13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t));
-        }
+        } else if (shape === 'target') {
+            const spikes = 5;
+            const radius1 = blobRadius;
+            const radius2 = blobRadius / 2;
+            const spikeAngle = Math.PI / spikes;
+
+            if (i % 2 === 0) {
+                x = centerX + Math.cos(angle) * radius1;
+                y = centerY + Math.sin(angle) * radius1;
+            } else {
+                x = centerX + Math.cos(angle + spikeAngle) * radius2;
+                y = centerY + Math.sin(angle + spikeAngle) * radius2;
+            }
+        } else if (shape === 'spiral') {
+            const spiralTurns = 5; 
+            const maxRadius = blobRadius; 
+            const totalSymbols = numSymbols; 
+            const angle = (i / totalSymbols) * spiralTurns * Math.PI * 2; 
+            const radius = (i / totalSymbols) * maxRadius; 
+        
+            x = centerX + radius * Math.cos(angle);
+            y = centerY + radius * Math.sin(angle);
+
+        } else if (shape === 'flower') {
+            const petals = 6; 
+            const petalDepth = 0.3; 
+            const radius = blobRadius * (1 + petalDepth * Math.sin(petals * angle)); 
+        
+            x = centerX + radius * Math.cos(angle);
+            y = centerY + radius * Math.sin(angle);
+
+        } else if (shape === 'starburst') {
+            const spikes = 12; 
+            const spikeIntensity = 0.7; 
+            const waveFrequency = 3; 
+            const waveAmplitude = 0.2; 
+            const baseRadius = blobRadius; 
+            const radius = baseRadius * (
+                1 +
+                spikeIntensity * Math.sin(spikes * angle) + 
+                waveAmplitude * Math.sin(waveFrequency * spikes * angle) 
+            );
+
+            x = centerX + radius * Math.cos(angle);
+            y = centerY + radius * Math.sin(angle);
+
+        } else if (shape === 'triangle') {
+            const triangleSides = 3; 
+            const perimeterSegments = numSymbols / triangleSides; 
+        
+            const rawVertices = [
+                { x: 0, y: -blobRadius }, 
+                { x: -blobRadius, y: blobRadius }, 
+                { x: blobRadius, y: blobRadius }  
+            ];
+        
+            const centroid = {
+                x: (rawVertices[0].x + rawVertices[1].x + rawVertices[2].x) / 3,
+                y: (rawVertices[0].y + rawVertices[1].y + rawVertices[2].y) / 3
+            };
+        
+            const vertices = rawVertices.map(vertex => ({
+                x: vertex.x - centroid.x + centerX,
+                y: vertex.y - centroid.y + centerY
+            }));
+        
+            const side = Math.floor(i / perimeterSegments);
+            const t = (i % perimeterSegments) / perimeterSegments; 
+        
+            const startVertex = vertices[side];
+            const endVertex = vertices[(side + 1) % triangleSides];
+        
+            x = startVertex.x + t * (endVertex.x - startVertex.x);
+            y = startVertex.y + t * (endVertex.y - startVertex.y);
+        }  
 
         blob[i].originalX = x;
         blob[i].originalY = y;
