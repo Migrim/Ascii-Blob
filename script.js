@@ -20,6 +20,7 @@ let symbolSize = parseInt(localStorage.getItem('symbolSize')) || 15;
 let swirlSpeed = parseFloat(localStorage.getItem('swirlSpeed')) || 0.02;
 let bounceEffect = parseFloat(localStorage.getItem('bounceEffect')) || 5;
 let waveEffect = parseFloat(localStorage.getItem('waveEffect')) || 1.1;
+let blobRadius = parseInt(localStorage.getItem('blobRadius')) || 150; 
 let swirlAngle = 0;
 let time = 0;
 let magnetMode = false;
@@ -29,14 +30,18 @@ let explosions = [];
 let mirrorMode = false;
 let currentShape = 'circle';
 let shapeIndex = 0;
+let morphing = false;
+let targetBlob = [];
+let morphProgress = 0;
 
 const shapes = ['normal', 'circle', 'square', 'heart', 'target', 'triangle', 'spiral', 'flower', 'starburst'];
-const blobRadius = 150;
 const centerX = canvas.width / 2;
 const centerY = canvas.height / 2;
 
 const mouse = { x: null, y: null, radius: parseInt(localStorage.getItem('cursorSize')) || 100 };
 
+const blobRadiusSlider = document.getElementById('blobRadiusSlider');
+const blobRadiusValue = document.getElementById('blobRadiusValue');
 const densitySlider = document.getElementById('densitySlider');
 const densityValue = document.getElementById('densityValue');
 const cursorSizeSlider = document.getElementById('cursorSizeSlider');
@@ -52,6 +57,8 @@ const bounceEffectValue = document.getElementById('bounceEffectValue');
 const waveEffectSlider = document.getElementById('waveEffectSlider');
 const waveEffectValue = document.getElementById('waveEffectValue');
 
+blobRadiusSlider.value = blobRadius; 
+blobRadiusValue.textContent = blobRadius;
 densitySlider.value = numSymbols;
 cursorSizeSlider.value = mouse.radius;
 blobSpeedSlider.value = blobSpeed;
@@ -67,6 +74,13 @@ symbolSizeValue.textContent = symbolSize;
 swirlSpeedValue.textContent = swirlSpeed;
 bounceEffectValue.textContent = bounceEffect;
 waveEffectValue.textContent = waveEffect;
+
+blobRadiusSlider.addEventListener('input', function () {
+    blobRadius = parseInt(this.value); 
+    blobRadiusValue.textContent = this.value; 
+    localStorage.setItem('blobRadius', this.value); 
+    resetBlob(); 
+});
 
 densitySlider.addEventListener('input', function () {
     numSymbols = parseInt(this.value);
@@ -173,10 +187,21 @@ function initBlob() {
     }
 }
 
+let startBlob = []; 
+
+function interpolatePositions(current, target, progress) {
+    return {
+        x: current.x + (target.x - current.x) * progress,
+        y: current.y + (target.y - current.y) * progress,
+    };
+}
 function changeBlobShape(shape) {
     const angleIncrement = (2 * Math.PI) / numSymbols;
     const centerX = canvas.width / 2;
     const centerY = canvas.height / 2;
+
+    startBlob = blob.map(part => ({ x: part.x, y: part.y })); 
+    targetBlob = []; 
 
     for (let i = 0; i < blob.length; i++) {
         let x, y;
@@ -290,60 +315,89 @@ function changeBlobShape(shape) {
         blob[i].originalY = y;
         blob[i].x = x;
         blob[i].y = y;
+
+        targetBlob.push({ x, y }); 
     }
+    morphing = true;
+    morphProgress = 0;
 }
 
 function drawBlob() {
+    if (morphing) {
+        morphProgress += 0.01;
+        if (morphProgress >= 1) {
+            morphProgress = 1;
+            morphing = false;
+
+            blob.forEach(part => {
+                part.vx = 0;
+                part.vy = 0;
+                part.x = part.originalX;
+                part.y = part.originalY;
+            });
+        }
+    }
+
     swirlAngle += swirlSpeed;
     time += waveEffect * 0.02;
 
     const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
-    gradient.addColorStop(0, '#e1bee7');   
-    gradient.addColorStop(0.25, '#ce93d8'); 
-    gradient.addColorStop(0.5, '#ba68c8');  
-    gradient.addColorStop(0.75, '#ab47bc'); 
-    gradient.addColorStop(1, '#9c27b0');    
+    gradient.addColorStop(0, '#e1bee7');
+    gradient.addColorStop(0.25, '#ce93d8');
+    gradient.addColorStop(0.5, '#ba68c8');
+    gradient.addColorStop(0.75, '#ab47bc');
+    gradient.addColorStop(1, '#9c27b0');
 
     blob.forEach((part, index) => {
+        if (morphing) {
+            const start = startBlob[index];
+            const target = targetBlob[index];
+            const interpolated = interpolatePositions(start, target, morphProgress);
+            part.x = interpolated.x;
+            part.y = interpolated.y;
+        }
+
         const dx = mouse.x - part.x;
         const dy = mouse.y - part.y;
         const distance = Math.sqrt(dx * dx + dy * dy);
 
-        if (vortexMode && distance < mouse.radius) {
-            const angle = Math.atan2(dy, dx);
-            const attractionStrength = vortexStrength;
-            part.vx += Math.cos(angle + Math.PI / 2) * attractionStrength;
-            part.vy += Math.sin(angle + Math.PI / 2) * attractionStrength;
-        } else if (magnetMode && distance < mouse.radius) {
-            const attractionStrength = 0.02;
-            part.vx += dx * attractionStrength;
-            part.vy += dy * attractionStrength;
-        } else if (distance < mouse.radius) {
-            const angle = Math.atan2(dy, dx);
-            const force = (mouse.radius - distance) / mouse.radius;
-            const escapeSpeed = force * bounceEffect * 5;
+        if (!morphing) {
+            if (vortexMode && distance < mouse.radius) {
+                const angle = Math.atan2(dy, dx);
+                const attractionStrength = vortexStrength;
+                part.vx += Math.cos(angle + Math.PI / 2) * attractionStrength;
+                part.vy += Math.sin(angle + Math.PI / 2) * attractionStrength;
+            } else if (magnetMode && distance < mouse.radius) {
+                const attractionStrength = 0.02;
+                part.vx += dx * attractionStrength;
+                part.vy += dy * attractionStrength;
+            } else if (distance < mouse.radius) {
+                const angle = Math.atan2(dy, dx);
+                const force = (mouse.radius - distance) / mouse.radius;
+                const escapeSpeed = force * bounceEffect * 5;
 
-            part.vx += Math.cos(angle) * -escapeSpeed;
-            part.vy += Math.sin(angle) * -escapeSpeed;
-        } else {
-            const angleFromCenter = Math.atan2(part.originalY - centerY, part.originalX - centerX);
-            const radiusFromCenter = Math.sqrt((part.originalX - centerX) ** 2 + (part.originalY - centerY) ** 2);
-            const newX = centerX + Math.cos(angleFromCenter + swirlAngle) * radiusFromCenter;
-            const newY = centerY + Math.sin(angleFromCenter + swirlAngle) * radiusFromCenter;
+                part.vx += Math.cos(angle) * -escapeSpeed;
+                part.vy += Math.sin(angle) * -escapeSpeed;
+            } else {
+                const angleFromCenter = Math.atan2(part.originalY - centerY, part.originalX - centerX);
+                const radiusFromCenter = Math.sqrt((part.originalX - centerX) ** 2 + (part.originalY - centerY) ** 2);
+                const newX = centerX + Math.cos(angleFromCenter + swirlAngle) * radiusFromCenter;
+                const newY = centerY + Math.sin(angleFromCenter + swirlAngle) * radiusFromCenter;
 
-            const waveOffset = Math.sin(time + index * 0.1) * waveEffect * 20;
-            const dx = newX - part.x;
-            const dy = newY - part.y + waveOffset;
+                const waveOffset = Math.sin(time + index * 0.1) * waveEffect * 20;
+                const dx = newX - part.x;
+                const dy = newY - part.y + waveOffset;
 
-            part.vx += dx * blobSpeed;
-            part.vy += dy * blobSpeed;
+                part.vx += dx * blobSpeed;
+                part.vy += dy * blobSpeed;
+            }
+
+            part.vx *= 0.9;
+            part.vy *= 0.9;
+
+            part.x += part.vx;
+            part.y += part.vy;
         }
-
-        part.vx *= 0.9;
-        part.vy *= 0.9;
-
-        part.x += part.vx;
-        part.y += part.vy;
 
         ctx.fillStyle = gradient;
         ctx.font = `${symbolSize}px monospace`;
