@@ -4,6 +4,7 @@
     <link rel="stylesheet" type="text/css" href="styles.css">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
     <title>ASCII Blob</title>
 </head>
 <body>
@@ -45,7 +46,7 @@
             <label>Symbol Size: </label>
             <input type="range" id="symbolSizeSlider" min="10" max="50" value="20">
         </div>
-        <div class="slider-container">
+        <div class="slider-container swirl">
             <span class="slider-label" id="swirlSpeedValue">0.02</span>
             <label>Swirl: </label>
             <input type="range" id="swirlSpeedSlider" min="0" max="0.12" step="0.01" value="0">
@@ -55,11 +56,15 @@
             <label>Bounce: </label>
             <input type="range" id="bounceEffectSlider" min="0" max="25" step="0.1" value="1">
         </div>
-        <div class="slider-container">
+        <div class="slider-container wave">
             <span class="slider-label" id="waveEffectValue">1.1</span>
             <label>Wave: </label>
             <input type="range" id="waveEffectSlider" min="0" max="5" step="0.1" value="0">
         </div>
+    </div>
+
+    <div id="switchTo3DMode" class="bottom-right-button">
+        <i class="fas fa-cube"></i> 3D
     </div>
 
     <script src="script.js"></script>

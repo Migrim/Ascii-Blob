@@ -33,6 +33,7 @@ let shapeIndex = 0;
 let morphing = false;
 let targetBlob = [];
 let morphProgress = 0;
+let is3DMode = false;
 
 const shapes = ['normal', 'circle', 'square', 'heart', 'target', 'triangle', 'spiral', 'flower', 'starburst'];
 const centerX = canvas.width / 2;
@@ -134,6 +135,8 @@ window.addEventListener('wheel', (event) => {
 });
 
 canvas.addEventListener('click', function () {
+    if (is3DMode) return; 
+
     if (!vortexMode && !magnetMode) {
         vortexMode = true;
         modeStatus.textContent = `Mode: Vortex`;
@@ -147,12 +150,108 @@ canvas.addEventListener('click', function () {
     }
 });
 
+function toggle3DMode() {
+    is3DMode = !is3DMode;
+
+    const swirlContainer = document.querySelector('.slider-container.swirl');
+    const waveContainer = document.querySelector('.slider-container.wave');
+
+    if (is3DMode) {
+        modeStatus.textContent = 'Mode: 3D Object';
+        swirlContainer.style.display = 'none';
+        waveContainer.style.display = 'none';
+
+        magnetMode = false;
+        vortexMode = false;
+        mirrorMode = false;
+        mouse.radius = 300; 
+        switchTo3DObject();
+    } else {
+        modeStatus.textContent = 'Mode: Normal';
+        swirlContainer.style.display = 'block';
+        waveContainer.style.display = 'block';
+        resetBlob();
+    }
+}
+
+let cubeAngleX = 0;
+let cubeAngleY = 0;
+
+function switchTo3DObject() {
+    const centerX = canvas.width / 2;
+    const centerY = canvas.height / 2;
+    const cubeSize = blobRadius * 2;
+
+    const symbolsPerFace = Math.floor(blob.length / 6);
+
+    blob.forEach((part, index) => {
+        let x, y, z;
+
+        const faceIndex = Math.floor(index / symbolsPerFace);
+        const positionOnFace = index % symbolsPerFace;
+        const gridSize = Math.sqrt(symbolsPerFace);
+        const cellSize = cubeSize / gridSize;
+
+        const gridX = positionOnFace % gridSize;
+        const gridY = Math.floor(positionOnFace / gridSize);
+
+        switch (faceIndex) {
+            case 0: // Front face
+                x = -cubeSize / 2 + gridX * cellSize;
+                y = -cubeSize / 2 + gridY * cellSize;
+                z = cubeSize / 2;
+                break;
+            case 1: // Back face
+                x = -cubeSize / 2 + gridX * cellSize;
+                y = -cubeSize / 2 + gridY * cellSize;
+                z = -cubeSize / 2;
+                break;
+            case 2: // Top face
+                x = -cubeSize / 2 + gridX * cellSize;
+                y = cubeSize / 2;
+                z = -cubeSize / 2 + gridY * cellSize;
+                break;
+            case 3: // Bottom face
+                x = -cubeSize / 2 + gridX * cellSize;
+                y = -cubeSize / 2;
+                z = -cubeSize / 2 + gridY * cellSize;
+                break;
+            case 4: // Left face
+                x = -cubeSize / 2;
+                y = -cubeSize / 2 + gridX * cellSize;
+                z = -cubeSize / 2 + gridY * cellSize;
+                break;
+            case 5: // Right face
+                x = cubeSize / 2;
+                y = -cubeSize / 2 + gridX * cellSize;
+                z = -cubeSize / 2 + gridY * cellSize;
+                break;
+        }
+
+        const rotatedX = x * Math.cos(cubeAngleY) - z * Math.sin(cubeAngleY);
+        const rotatedZ = x * Math.sin(cubeAngleY) + z * Math.cos(cubeAngleY);
+
+        const rotatedY = y * Math.cos(cubeAngleX) - rotatedZ * Math.sin(cubeAngleX);
+        const finalZ = y * Math.sin(cubeAngleX) + rotatedZ * Math.cos(cubeAngleX);
+
+        const perspective = 800 / (800 - finalZ);
+        part.x = centerX + rotatedX * perspective;
+        part.y = centerY + rotatedY * perspective;
+        part.vx = 0;
+        part.vy = 0;
+    });
+}
+
+document.getElementById('switchTo3DMode').addEventListener('click', toggle3DMode);
+
 canvas.addEventListener('contextmenu', function (event) {
     event.preventDefault();
     asciiExplosion(event.x, event.y);
 });
 
 window.addEventListener('keydown', (event) => {
+    if (is3DMode) return; // Disable mirror mode in 3D mode
+
     if (event.key === 'm' || event.key === 'M') {
         mirrorMode = !mirrorMode;
         modeStatus.textContent = mirrorMode ? `Mode: Mirror` : `Mode: Normal`;
@@ -160,6 +259,8 @@ window.addEventListener('keydown', (event) => {
 });
 
 window.addEventListener('keydown', (event) => {
+    if (is3DMode) return; // Disable mirror mode in 3D mode
+
     if (event.key === 's' || event.key === 'S') {
         shapeIndex = (shapeIndex + 1) % shapes.length;
         currentShape = shapes[shapeIndex];
@@ -476,10 +577,16 @@ function drawExplosions() {
 }
 
 function animate() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height); 
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    drawBlob();        
-    drawExplosions();  
+    if (is3DMode) {
+        cubeAngleX += 0.01;
+        cubeAngleY += 0.01;
+        switchTo3DObject();
+    }
+
+    drawBlob();
+    drawExplosions();
 
     requestAnimationFrame(animate);
 }
