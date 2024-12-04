@@ -194,6 +194,8 @@ function switchTo3DObject() {
         else if (current3dShape === 'sphere') current3dShape = 'pyramid';
         else current3dShape = 'cube';
     }
+    
+    densitySlider.disabled = current3dShape === 'pyramid';
 
     const morphProgress = (elapsed % morphDuration) / morphDuration;
 
@@ -227,13 +229,13 @@ function switchTo3DObject() {
         } else if (current3dShape === 'pyramid') {
             const height = cubeSize;
             const baseSize = cubeSize;
-            const pyramidSymbolsPerFace = Math.floor(blob.length / 5);
+            const pyramidSymbolsPerFace = Math.max(1, Math.floor(blob.length / 5)); // At least one point per face
         
             const faceIndex = Math.floor(index / pyramidSymbolsPerFace);
             const positionInFace = index % pyramidSymbolsPerFace;
         
-            if (faceIndex === 0) { 
-                const gridSize = Math.sqrt(pyramidSymbolsPerFace);
+            if (faceIndex === 0) { // Base
+                const gridSize = Math.max(1, Math.ceil(Math.sqrt(pyramidSymbolsPerFace))); // Create a grid structure
                 const cellSize = baseSize / gridSize;
         
                 const gridX = positionInFace % gridSize;
@@ -242,7 +244,7 @@ function switchTo3DObject() {
                 x = -baseSize / 2 + gridX * cellSize;
                 y = -height / 2;
                 z = -baseSize / 2 + gridZ * cellSize;
-            } else { 
+            } else { // Side faces
                 const apex = [0, height / 2, 0];
                 const corners = [
                     [-baseSize / 2, -height / 2, baseSize / 2],
@@ -252,14 +254,25 @@ function switchTo3DObject() {
                 ];
         
                 const corner1 = corners[faceIndex - 1];
-                const corner2 = corners[faceIndex % 4];
+                const corner2 = corners[faceIndex % 4]; // Wrap around to the first corner
         
-                const u = Math.sqrt(positionInFace / pyramidSymbolsPerFace);
-                const v = (positionInFace % Math.sqrt(pyramidSymbolsPerFace)) / Math.sqrt(pyramidSymbolsPerFace);
+                const subdivisions = Math.max(2, Math.ceil(Math.sqrt(pyramidSymbolsPerFace))); // Ensure at least two subdivisions
+                const row = Math.floor(positionInFace / subdivisions); // Current row
+                const col = positionInFace % subdivisions; // Current column in row
         
-                x = (1 - u) * apex[0] + u * ((1 - v) * corner1[0] + v * corner2[0]);
-                y = (1 - u) * apex[1] + u * ((1 - v) * corner1[1] + v * corner2[1]);
-                z = (1 - u) * apex[2] + u * ((1 - v) * corner1[2] + v * corner2[2]);
+                const u = row / subdivisions; // Vertical interpolation from base to apex
+                const v = col / (subdivisions - 1); // Horizontal interpolation along the base
+        
+                // Interpolate between apex and base edges
+                const basePoint = [
+                    (1 - v) * corner1[0] + v * corner2[0],
+                    (1 - v) * corner1[1] + v * corner2[1],
+                    (1 - v) * corner1[2] + v * corner2[2],
+                ];
+        
+                x = (1 - u) * apex[0] + u * basePoint[0];
+                y = (1 - u) * apex[1] + u * basePoint[1];
+                z = (1 - u) * apex[2] + u * basePoint[2];
             }
         }
 
