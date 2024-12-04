@@ -122,3 +122,8 @@ input[type="range"]::-moz-range-thumb:hover {
 .bottom-right-button:hover {
     background: rgba(255, 255, 255, 0.3);
 }
+#switchToClockMode {
+    right: 120px; /* Offset to avoid overlap with the 3D button */
+    bottom: 20px;
+    display: none;
+}

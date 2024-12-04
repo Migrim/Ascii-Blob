@@ -176,6 +176,9 @@ function toggle3DMode() {
 
 let cubeAngleX = 0;
 let cubeAngleY = 0;
+let current3dShape = 'cube';
+let morphStartTime = Date.now();
+const morphDuration = 5000;
 
 function switchTo3DObject() {
     const centerX = canvas.width / 2;
@@ -183,49 +186,81 @@ function switchTo3DObject() {
     const cubeSize = blobRadius * 2;
 
     const symbolsPerFace = Math.floor(blob.length / 6);
+    const elapsed = Date.now() - morphStartTime;
+
+    if (elapsed > morphDuration) {
+        morphStartTime = Date.now();
+        if (current3dShape === 'cube') current3dShape = 'sphere';
+        else if (current3dShape === 'sphere') current3dShape = 'pyramid';
+        else current3dShape = 'cube';
+    }
+
+    const morphProgress = (elapsed % morphDuration) / morphDuration;
 
     blob.forEach((part, index) => {
         let x, y, z;
 
-        const faceIndex = Math.floor(index / symbolsPerFace);
-        const positionOnFace = index % symbolsPerFace;
-        const gridSize = Math.sqrt(symbolsPerFace);
-        const cellSize = cubeSize / gridSize;
+        if (current3dShape === 'cube') {
+            const faceIndex = Math.floor(index / symbolsPerFace);
+            const positionOnFace = index % symbolsPerFace;
+            const gridSize = Math.sqrt(symbolsPerFace);
+            const cellSize = cubeSize / gridSize;
 
-        const gridX = positionOnFace % gridSize;
-        const gridY = Math.floor(positionOnFace / gridSize);
+            const gridX = positionOnFace % gridSize;
+            const gridY = Math.floor(positionOnFace / gridSize);
 
-        switch (faceIndex) {
-            case 0: // Front face
-                x = -cubeSize / 2 + gridX * cellSize;
-                y = -cubeSize / 2 + gridY * cellSize;
-                z = cubeSize / 2;
-                break;
-            case 1: // Back face
-                x = -cubeSize / 2 + gridX * cellSize;
-                y = -cubeSize / 2 + gridY * cellSize;
-                z = -cubeSize / 2;
-                break;
-            case 2: // Top face
-                x = -cubeSize / 2 + gridX * cellSize;
-                y = cubeSize / 2;
-                z = -cubeSize / 2 + gridY * cellSize;
-                break;
-            case 3: // Bottom face
-                x = -cubeSize / 2 + gridX * cellSize;
-                y = -cubeSize / 2;
-                z = -cubeSize / 2 + gridY * cellSize;
-                break;
-            case 4: // Left face
-                x = -cubeSize / 2;
-                y = -cubeSize / 2 + gridX * cellSize;
-                z = -cubeSize / 2 + gridY * cellSize;
-                break;
-            case 5: // Right face
-                x = cubeSize / 2;
-                y = -cubeSize / 2 + gridX * cellSize;
-                z = -cubeSize / 2 + gridY * cellSize;
-                break;
+            switch (faceIndex) {
+                case 0: x = -cubeSize / 2 + gridX * cellSize; y = -cubeSize / 2 + gridY * cellSize; z = cubeSize / 2; break;
+                case 1: x = -cubeSize / 2 + gridX * cellSize; y = -cubeSize / 2 + gridY * cellSize; z = -cubeSize / 2; break;
+                case 2: x = -cubeSize / 2 + gridX * cellSize; y = cubeSize / 2; z = -cubeSize / 2 + gridY * cellSize; break;
+                case 3: x = -cubeSize / 2 + gridX * cellSize; y = -cubeSize / 2; z = -cubeSize / 2 + gridY * cellSize; break;
+                case 4: x = -cubeSize / 2; y = -cubeSize / 2 + gridX * cellSize; z = -cubeSize / 2 + gridY * cellSize; break;
+                case 5: x = cubeSize / 2; y = -cubeSize / 2 + gridX * cellSize; z = -cubeSize / 2 + gridY * cellSize; break;
+            }
+        } else if (current3dShape === 'sphere') {
+            const phi = Math.acos(1 - 2 * (index + 0.5) / blob.length); 
+            const theta = Math.PI * (1 + Math.sqrt(5)) * index; 
+
+            x = Math.sin(phi) * Math.cos(theta) * cubeSize / 1.5;
+            y = Math.sin(phi) * Math.sin(theta) * cubeSize / 1.5;
+            z = Math.cos(phi) * cubeSize / 1.5;
+        } else if (current3dShape === 'pyramid') {
+            const height = cubeSize;
+            const baseSize = cubeSize;
+            const pyramidSymbolsPerFace = Math.floor(blob.length / 5);
+        
+            const faceIndex = Math.floor(index / pyramidSymbolsPerFace);
+            const positionInFace = index % pyramidSymbolsPerFace;
+        
+            if (faceIndex === 0) { 
+                const gridSize = Math.sqrt(pyramidSymbolsPerFace);
+                const cellSize = baseSize / gridSize;
+        
+                const gridX = positionInFace % gridSize;
+                const gridZ = Math.floor(positionInFace / gridSize);
+        
+                x = -baseSize / 2 + gridX * cellSize;
+                y = -height / 2;
+                z = -baseSize / 2 + gridZ * cellSize;
+            } else { 
+                const apex = [0, height / 2, 0];
+                const corners = [
+                    [-baseSize / 2, -height / 2, baseSize / 2],
+                    [baseSize / 2, -height / 2, baseSize / 2],
+                    [baseSize / 2, -height / 2, -baseSize / 2],
+                    [-baseSize / 2, -height / 2, -baseSize / 2],
+                ];
+        
+                const corner1 = corners[faceIndex - 1];
+                const corner2 = corners[faceIndex % 4];
+        
+                const u = Math.sqrt(positionInFace / pyramidSymbolsPerFace);
+                const v = (positionInFace % Math.sqrt(pyramidSymbolsPerFace)) / Math.sqrt(pyramidSymbolsPerFace);
+        
+                x = (1 - u) * apex[0] + u * ((1 - v) * corner1[0] + v * corner2[0]);
+                y = (1 - u) * apex[1] + u * ((1 - v) * corner1[1] + v * corner2[1]);
+                z = (1 - u) * apex[2] + u * ((1 - v) * corner1[2] + v * corner2[2]);
+            }
         }
 
         const rotatedX = x * Math.cos(cubeAngleY) - z * Math.sin(cubeAngleY);
